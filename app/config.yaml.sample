@@ -1,0 +1,7 @@
+weather:
+ zip: <ENTER ZIP>
+ api_key: <ENTER API KEY>
+stocks:
+ symbol: <ENTER SYMBOL>
+ api_key: <ENTER API KEY>
+
