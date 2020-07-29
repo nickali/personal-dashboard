@@ -3,12 +3,34 @@ package main
 import (
 	"addons/stocks"
 	"addons/weather"
+	"context"
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
+	"github.com/mum4k/termdash"
+	"github.com/mum4k/termdash/container"
+	"github.com/mum4k/termdash/linestyle"
+	"github.com/mum4k/termdash/terminal/termbox"
+	"github.com/mum4k/termdash/terminal/terminalapi"
+	"github.com/mum4k/termdash/widgets/text"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
+
+func printConfig() {
+	// Print out config file content
+	c := viper.AllSettings()
+	bs, err := yaml.Marshal(c)
+	if err != nil {
+		log.Fatalf("unable to marshal config to YAML: %v", err)
+	}
+	fmt.Println("Printing imported config ---")
+	fmt.Println(string(bs))
+	fmt.Println("Done printing imported config ---")
+
+}
 
 func readConfig() bool {
 	viper.SetConfigName("config")         // name of config file (without extension)
@@ -25,19 +47,27 @@ func readConfig() bool {
 		}
 	}
 
-	/*
-		// Print out config file content
-		c := viper.AllSettings()
-		bs, err := yaml.Marshal(c)
-		if err != nil {
-			log.Fatalf("unable to marshal config to YAML: %v", err)
-		}
-		fmt.Println("Printing imported config ---")
-		fmt.Println(string(bs))
-		fmt.Println("Done printing imported config ---")
-	*/
-
 	return true
+}
+
+func writeLines(ctx context.Context, t *text.Text, delay time.Duration) {
+	//s := rand.NewSource(time.Now().Unix())
+	//	r := rand.New(s)
+	ticker := time.NewTicker(delay)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			weatherOutput := weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
+			if err := t.Write(fmt.Sprintf("%s\n", weatherOutput), text.WriteReplace()); err != nil {
+				panic(err)
+			}
+
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func main() {
@@ -50,13 +80,17 @@ func main() {
 	*/
 
 	readConfig()
+	//printConfig()
+
+	var weatherOutput string
+	//	var stocksOutput string
 
 	// Call and wait till all are finished.
 	var wg sync.WaitGroup
 	wg.Add(2)
 
 	go func() {
-		weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
+		weatherOutput = weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
 		wg.Done()
 	}()
 
@@ -66,6 +100,52 @@ func main() {
 	}()
 
 	wg.Wait()
+
+	t, err := termbox.New()
+	if err != nil {
+		panic(err)
+	}
+	defer t.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	borderlessLeft, err := text.New()
+	if err != nil {
+		panic(err)
+	}
+	if err := borderlessLeft.Write(weatherOutput, text.WriteReplace()); err != nil {
+		panic(err)
+	}
+
+	borderlessRight, err := text.New()
+	if err != nil {
+		panic(err)
+	}
+	if err := borderlessRight.Write("This is the right box"); err != nil {
+		panic(err)
+	}
+
+	go writeLines(ctx, borderlessLeft, 3*time.Second)
+
+	c, err := container.New(
+		t,
+		container.Border(linestyle.Light),
+		container.BorderTitle("PRESS Q TO QUIT"),
+		container.SplitVertical(
+			container.Left(container.PlaceWidget(borderlessLeft)), container.Right(container.PlaceWidget(borderlessRight))))
+
+	if err != nil {
+		panic(err)
+	}
+
+	quitter := func(k *terminalapi.Keyboard) {
+		if k.Key == 'q' || k.Key == 'Q' {
+			cancel()
+		}
+	}
+
+	if err := termdash.Run(ctx, t, c, termdash.KeyboardSubscriber(quitter)); err != nil {
+		panic(err)
+	}
 
 	fmt.Println("Terminating the application...")
 }
