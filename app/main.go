@@ -1,6 +1,7 @@
 package main
 
 import (
+	"addons/newsreader"
 	"addons/stocks"
 	"addons/weather"
 	"context"
@@ -83,11 +84,12 @@ func main() {
 	//printConfig()
 
 	var weatherOutput string
+	var newsreaderOutput string
 	//	var stocksOutput string
 
 	// Call and wait till all are finished.
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 
 	go func() {
 		weatherOutput = weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
@@ -96,6 +98,11 @@ func main() {
 
 	go func() {
 		stocks.StockPrint(viper.GetString("stocks.symbol"), viper.GetString("stocks.api_key"))
+		wg.Done()
+	}()
+
+	go func() {
+		newsreaderOutput = newsreader.NewsReaderPrint(viper.GetString("newsreader.url"))
 		wg.Done()
 	}()
 
@@ -108,11 +115,19 @@ func main() {
 	defer t.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	borderlessLeft, err := text.New()
+	borderlessTopLeft, err := text.New()
 	if err != nil {
 		panic(err)
 	}
-	if err := borderlessLeft.Write(weatherOutput, text.WriteReplace()); err != nil {
+	if err := borderlessTopLeft.Write(weatherOutput, text.WriteReplace()); err != nil {
+		panic(err)
+	}
+
+	borderlessBottomLeft, err := text.New()
+	if err != nil {
+		panic(err)
+	}
+	if err := borderlessBottomLeft.Write(newsreaderOutput); err != nil {
 		panic(err)
 	}
 
@@ -124,14 +139,16 @@ func main() {
 		panic(err)
 	}
 
-	go writeLines(ctx, borderlessLeft, 3*time.Second)
+	go writeLines(ctx, borderlessTopLeft, 3*time.Second)
 
 	c, err := container.New(
 		t,
 		container.Border(linestyle.Light),
 		container.BorderTitle("PRESS Q TO QUIT"),
 		container.SplitVertical(
-			container.Left(container.PlaceWidget(borderlessLeft)), container.Right(container.PlaceWidget(borderlessRight))))
+			container.Left(
+				container.SplitHorizontal(container.Top(container.PlaceWidget(borderlessTopLeft)), container.Bottom(container.PlaceWidget(borderlessBottomLeft)), container.SplitPercent(50))),
+			container.Right(container.PlaceWidget(borderlessRight))))
 
 	if err != nil {
 		panic(err)

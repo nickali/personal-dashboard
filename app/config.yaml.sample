@@ -4,4 +4,7 @@ weather:
 stocks:
  symbol: <ENTER SYMBOL>
  api_key: <ENTER API KEY>
+newsreader:
+ url: <ENTER URL>
+
 
