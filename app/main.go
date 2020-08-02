@@ -147,7 +147,7 @@ func main() {
 		container.BorderTitle("PRESS Q TO QUIT"),
 		container.SplitVertical(
 			container.Left(
-				container.SplitHorizontal(container.Top(container.PlaceWidget(borderlessTopLeft)), container.Bottom(container.PlaceWidget(borderlessBottomLeft)), container.SplitPercent(50))),
+				container.SplitHorizontal(container.Top(container.PlaceWidget(borderlessTopLeft)), container.Bottom(container.PlaceWidget(borderlessBottomLeft)), container.SplitPercent(5))),
 			container.Right(container.PlaceWidget(borderlessRight))))
 
 	if err != nil {
