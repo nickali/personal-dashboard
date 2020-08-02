@@ -6,5 +6,8 @@ stocks:
  api_key: <ENTER API KEY>
 newsreader:
  url: <ENTER URL>
+news:
+ url: <ENTER URL>
+ api_key: <ENTER API KEY>
 
 
