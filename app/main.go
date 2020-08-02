@@ -51,9 +51,8 @@ func readConfig() bool {
 	return true
 }
 
-func writeLines(ctx context.Context, t *text.Text, delay time.Duration) {
-	//s := rand.NewSource(time.Now().Unix())
-	//	r := rand.New(s)
+func writeWeather(ctx context.Context, t *text.Text, delay time.Duration) {
+
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
 
@@ -62,6 +61,25 @@ func writeLines(ctx context.Context, t *text.Text, delay time.Duration) {
 		case <-ticker.C:
 			weatherOutput := weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
 			if err := t.Write(fmt.Sprintf("%s\n", weatherOutput), text.WriteReplace()); err != nil {
+				panic(err)
+			}
+
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func writeNewsreader(ctx context.Context, t *text.Text, delay time.Duration) {
+
+	ticker := time.NewTicker(delay)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			newsreaderOutput := newsreader.NewsReaderPrint(viper.GetString("newsreader.url"))
+			if err := t.Write(fmt.Sprintf("%s\n", newsreaderOutput), text.WriteReplace()); err != nil {
 				panic(err)
 			}
 
@@ -127,7 +145,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if err := borderlessBottomLeft.Write(newsreaderOutput); err != nil {
+	if err := borderlessBottomLeft.Write(newsreaderOutput, text.WriteReplace()); err != nil {
 		panic(err)
 	}
 
@@ -139,7 +157,8 @@ func main() {
 		panic(err)
 	}
 
-	go writeLines(ctx, borderlessTopLeft, 3*time.Second)
+	go writeWeather(ctx, borderlessTopLeft, 10*time.Second)
+	go writeNewsreader(ctx, borderlessBottomLeft, 30*time.Second)
 
 	c, err := container.New(
 		t,

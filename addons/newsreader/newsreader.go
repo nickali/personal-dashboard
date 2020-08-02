@@ -2,24 +2,28 @@ package newsreader
 
 import (
 	"strings"
+	"time"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/mmcdole/gofeed"
 )
 
-var maxItems = 100
+var maxItems = 50
 var stOutput strings.Builder
+var fmtDate string
 
 // NewsReaderPrint just outputs a string.
 func NewsReaderPrint(stURL string) string {
 
+	dt := time.Now()
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(stURL)
 
 	if err != nil {
 		stOutput.WriteString("The HTTP request failed with error with feed")
 	} else {
-		stOutput.WriteString(feed.Title + "\n\n")
+		fmtDate = "RSS (" + dt.Format("01-02-2006 15:04:05"+")\n\n")
+		stOutput.WriteString(fmtDate)
 
 		var items = feed.Items
 		var maxItemsInFeed = len(items)
@@ -27,9 +31,9 @@ func NewsReaderPrint(stURL string) string {
 		p.AllowElements("p")
 
 		for i := 0; i <= (maxItemsInFeed-1) && i <= (maxItems-1); i++ {
-			stOutput.WriteString(items[i].Title + "\n")
-			//strippedHTMLDesc := strip.StripTags(items[i].Description[:100])
 
+			//strippedHTMLDesc := strip.StripTags(items[i].Description[:100])
+			stOutput.WriteString(items[i].Title + "\n")
 			strippedNewlines2Desc := strings.Replace(items[i].Description, "\r", " ", -1)
 			strippedNewlines3Desc := strings.Replace(strippedNewlines2Desc, "<!-- SC_OFF --><div>", "", -1)
 			strippedNewlines4Desc := strings.Replace(strippedNewlines3Desc, "<div>", "", -1)
