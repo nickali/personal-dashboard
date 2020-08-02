@@ -20,6 +20,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const rootID = "root"
+
 func printConfig() {
 	// Print out config file content
 	c := viper.AllSettings()
@@ -51,7 +53,7 @@ func readConfig() bool {
 	return true
 }
 
-func writeWeather(ctx context.Context, t *text.Text, delay time.Duration) {
+func writeUpdate(ctx context.Context, TopLeft *text.Text, BottomLeft *text.Text, delay time.Duration) {
 
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
@@ -60,26 +62,11 @@ func writeWeather(ctx context.Context, t *text.Text, delay time.Duration) {
 		select {
 		case <-ticker.C:
 			weatherOutput := weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
-			if err := t.Write(fmt.Sprintf("%s\n", weatherOutput), text.WriteReplace()); err != nil {
+			if err := TopLeft.Write(fmt.Sprintf("%s\n", weatherOutput), text.WriteReplace()); err != nil {
 				panic(err)
 			}
-
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-func writeNewsreader(ctx context.Context, t *text.Text, delay time.Duration) {
-
-	ticker := time.NewTicker(delay)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
 			newsreaderOutput := newsreader.NewsReaderPrint(viper.GetString("newsreader.url"))
-			if err := t.Write(fmt.Sprintf("%s\n", newsreaderOutput), text.WriteReplace()); err != nil {
+			if err := BottomLeft.Write(fmt.Sprintf("%s\n", newsreaderOutput), text.WriteReplace()); err != nil {
 				panic(err)
 			}
 
@@ -103,6 +90,7 @@ func main() {
 
 	var weatherOutput string
 	var newsreaderOutput string
+
 	//	var stocksOutput string
 
 	// Call and wait till all are finished.
@@ -133,6 +121,7 @@ func main() {
 	defer t.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
+
 	borderlessTopLeft, err := text.New()
 	if err != nil {
 		panic(err)
@@ -157,11 +146,10 @@ func main() {
 		panic(err)
 	}
 
-	go writeWeather(ctx, borderlessTopLeft, 10*time.Second)
-	go writeNewsreader(ctx, borderlessBottomLeft, 30*time.Second)
+	go writeUpdate(ctx, borderlessTopLeft, borderlessBottomLeft, 10*time.Second)
 
 	c, err := container.New(
-		t,
+		t, container.ID(rootID),
 		container.Border(linestyle.Light),
 		container.BorderTitle("PRESS Q TO QUIT"),
 		container.SplitVertical(
@@ -170,6 +158,10 @@ func main() {
 			container.Right(container.PlaceWidget(borderlessRight))))
 
 	if err != nil {
+		panic(err)
+	}
+
+	if err := c.Update(rootID); err != nil {
 		panic(err)
 	}
 

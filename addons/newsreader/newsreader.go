@@ -8,13 +8,13 @@ import (
 	"github.com/mmcdole/gofeed"
 )
 
-var maxItems = 50
-var stOutput strings.Builder
+var maxItems = 3
+
 var fmtDate string
 
 // NewsReaderPrint just outputs a string.
 func NewsReaderPrint(stURL string) string {
-
+	stOutput := strings.Builder{}
 	dt := time.Now()
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(stURL)
@@ -31,8 +31,6 @@ func NewsReaderPrint(stURL string) string {
 		p.AllowElements("p")
 
 		for i := 0; i <= (maxItemsInFeed-1) && i <= (maxItems-1); i++ {
-
-			//strippedHTMLDesc := strip.StripTags(items[i].Description[:100])
 			stOutput.WriteString(items[i].Title + "\n")
 			strippedNewlines2Desc := strings.Replace(items[i].Description, "\r", " ", -1)
 			strippedNewlines3Desc := strings.Replace(strippedNewlines2Desc, "<!-- SC_OFF --><div>", "", -1)
