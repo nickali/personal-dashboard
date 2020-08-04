@@ -16,11 +16,8 @@ var maxItems = 20
 var maxLength = 300
 var fmtDate string
 
-// News is wrapper for news data.
-
-// NewsPrint just outputs a string.
-
-func NewsPrint(url string, stAPI string) ([]string, []text.WriteOption, []text.WriteOption) {
+// Print outupts what is to be printed on the screen.
+func Print(url string, stAPI string) ([]string, []text.WriteOption, []text.WriteOption) {
 	wrappedText := make([]string, 0)
 	wrappedOpt := make([]text.WriteOption, 0)
 	wrappedState := make([]text.WriteOption, 0)
@@ -50,23 +47,23 @@ func NewsPrint(url string, stAPI string) ([]string, []text.WriteOption, []text.W
 
 			for i := 0; i < numArticles/2-1; i++ {
 
-				descLength := len(resultDesc[i].String())
+				filterDesc := strings.ReplaceAll(resultDesc[i].String(), "\u00a0", "")
+				descLength := len(filterDesc)
 				if descLength < 300 {
 					if descLength == 0 {
 						maxLength = 0
 					} else {
-						maxLength = len(resultDesc[i].String()) - 1
+						maxLength = len(filterDesc) - 1
 					}
 				} else {
 					maxLength = 300
 				}
 
-				scrubbedDesc := strings.ReplaceAll(resultDesc[i].String(), "\u00a0", "")
 				wrappedText = append(wrappedText, resultTitle[i].String()+"\n")
 				wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorGreen)))
 				wrappedState = append(wrappedState, nil)
 
-				wrappedText = append(wrappedText, scrubbedDesc[:maxLength]+"\n")
+				wrappedText = append(wrappedText, filterDesc[:maxLength]+"\n")
 				wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorRed)))
 				wrappedState = append(wrappedState, nil)
 

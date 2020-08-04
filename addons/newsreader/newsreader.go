@@ -6,23 +6,35 @@ import (
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/mmcdole/gofeed"
+	"github.com/mum4k/termdash/cell"
+	"github.com/mum4k/termdash/widgets/text"
 )
 
 var maxItems = 20
-
+var maxLength = 300
 var fmtDate string
 
-// NewsReaderPrint just outputs a string.
-func NewsReaderPrint(stURL string) string {
+// Print outputs what needs to be drawn on the screen.
+func Print(stURL string) ([]string, []text.WriteOption, []text.WriteOption) {
+	wrappedText := make([]string, 0)
+	wrappedOpt := make([]text.WriteOption, 0)
+	wrappedState := make([]text.WriteOption, 0)
+
 	stOutput := strings.Builder{}
 	dt := time.Now()
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(stURL)
 
 	if err != nil {
-		stOutput.WriteString("The HTTP request failed with error with feed")
+		wrappedText = append(wrappedText, "The HTTP request failed with error with feed")
+		wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorRed)))
+		wrappedState = append(wrappedState, text.WriteReplace())
+
 	} else {
-		fmtDate = "RSS (" + dt.Format("01-02-2006 15:04:05"+")\n\n")
+		fmtDate = "Updated (" + dt.Format("01-02-2006 15:04:05"+")\n\n")
+		wrappedText = append(wrappedText, fmtDate)
+		wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorYellow)))
+		wrappedState = append(wrappedState, text.WriteReplace())
 		stOutput.WriteString(fmtDate)
 
 		var items = feed.Items
@@ -31,7 +43,7 @@ func NewsReaderPrint(stURL string) string {
 		p.AllowElements("p")
 
 		for i := 0; i <= (maxItemsInFeed-1) && i <= (maxItems-1); i++ {
-			stOutput.WriteString(items[i].Title + "\n")
+			// sanitize description
 			strippedNewlines2Desc := strings.Replace(items[i].Description, "\r", " ", -1)
 			strippedNewlines3Desc := strings.Replace(strippedNewlines2Desc, "<!-- SC_OFF --><div>", "", -1)
 			strippedNewlines4Desc := strings.Replace(strippedNewlines3Desc, "<div>", "", -1)
@@ -40,13 +52,36 @@ func NewsReaderPrint(stURL string) string {
 			strippedNewlines7Desc := strings.Replace(strippedNewlines6Desc, "<p>", "", -1)
 			strippedNewlines8Desc := strings.Replace(strippedNewlines7Desc, "</p>", "", -1)
 			strippedNewlines9Desc := strings.Replace(strippedNewlines8Desc, "&lt;", "", -1)
-			strippedDesc := strippedNewlines9Desc[:100]
 
-			stOutput.WriteString(p.Sanitize(strippedDesc) + "\n" + items[i].Link + "\n-----\n")
+			descLength := len(strippedNewlines9Desc)
+			if descLength < 300 {
+				if descLength == 0 {
+					maxLength = 0
+				} else {
+					maxLength = len(strippedNewlines9Desc) - 1
+				}
+			} else {
+				maxLength = 300
+			}
+
+			strippedDesc := p.Sanitize(strippedNewlines9Desc[:maxLength])
+
+			wrappedText = append(wrappedText, items[i].Title+"\n")
+			wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorGreen)))
+			wrappedState = append(wrappedState, nil)
+
+			wrappedText = append(wrappedText, strippedDesc+"\n")
+			wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorRed)))
+			wrappedState = append(wrappedState, nil)
+
+			wrappedText = append(wrappedText, items[i].Link+"\n\n")
+			wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorBlue)))
+			wrappedState = append(wrappedState, nil)
+
 		}
 
 	}
 
-	return stOutput.String()
+	return wrappedText, wrappedOpt, wrappedState
 
 }

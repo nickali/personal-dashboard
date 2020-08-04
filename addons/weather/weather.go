@@ -16,11 +16,11 @@ const url = "https://api.openweathermap.org/data/2.5/weather?"
 
 // Weather is wrapper for weather data.
 type Weather struct {
-	WeatherDetail *WeatherDetail `json:"main"`
+	WeatherDetail *WDetail `json:"main"`
 }
 
-// WeatherDetail provides details about the current weather
-type WeatherDetail struct {
+// WDetail provides details about the current weather
+type WDetail struct {
 	WeatherTemp      float32 `json:"temp"`
 	WeatherFeelsLike float32 `json:"feels_like"`
 	WeatherTempMin   float32 `json:"temp_min"`
@@ -29,9 +29,9 @@ type WeatherDetail struct {
 	WeatherHumidity  float32 `json:"humidity"`
 }
 
-// WeatherPrint just outputs a string.
+// Print outputs what needs to be drawn on the screen.
 // See https://openweathermap.org/current#one
-func WeatherPrint(stZip string, stAPI string) ([]string, []text.WriteOption, []text.WriteOption) {
+func Print(stZip string, stAPI string) ([]string, []text.WriteOption, []text.WriteOption) {
 	dt := time.Now()
 	var b strings.Builder
 	wrappedText := make([]string, 0)
@@ -48,7 +48,7 @@ func WeatherPrint(stZip string, stAPI string) ([]string, []text.WriteOption, []t
 
 		data, _ := ioutil.ReadAll(response.Body)
 		jsonData := &Weather{
-			WeatherDetail: &WeatherDetail{},
+			WeatherDetail: &WDetail{},
 		}
 		err := json.Unmarshal([]byte(data), jsonData)
 

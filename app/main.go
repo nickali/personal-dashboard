@@ -62,8 +62,7 @@ func writeUpdate(ctx context.Context, TopLeft *text.Text, BottomLeft *text.Text,
 	for {
 		select {
 		case <-ticker.C:
-			wrappedText, wrappedOpt, wrappedState := weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
-
+			wrappedText, wrappedOpt, wrappedState := weather.Print(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
 			for i, s := range wrappedText {
 				if wrappedState[i] != nil {
 					TopLeft.Write(s, wrappedState[i], wrappedOpt[i])
@@ -72,13 +71,16 @@ func writeUpdate(ctx context.Context, TopLeft *text.Text, BottomLeft *text.Text,
 				}
 			}
 
-			newsreaderOutput := newsreader.NewsReaderPrint(viper.GetString("newsreader.url"))
-			if err := BottomLeft.Write(fmt.Sprintf("%s\n", newsreaderOutput), text.WriteReplace()); err != nil {
-				panic(err)
+			rsswrappedText, rsswrappedOpt, rsswrappedState := newsreader.Print(viper.GetString("newsreader.url"))
+			for i, s := range rsswrappedText {
+				if rsswrappedState[i] != nil {
+					BottomLeft.Write(s, rsswrappedState[i], rsswrappedOpt[i])
+				} else {
+					BottomLeft.Write(s, rsswrappedOpt[i])
+				}
 			}
 
-			newswrappedText, newswrappedOpt, newswrappedState := news.NewsPrint(viper.GetString("news.url"), viper.GetString("news.api_key"))
-
+			newswrappedText, newswrappedOpt, newswrappedState := news.Print(viper.GetString("news.url"), viper.GetString("news.api_key"))
 			for i, s := range newswrappedText {
 				if newswrappedState[i] != nil {
 					TopRight.Write(s, newswrappedState[i], newswrappedOpt[i])
@@ -97,7 +99,6 @@ func main() {
 	fmt.Println("Starting the application...")
 
 	readConfig()
-	//printConfig()
 
 	var wrappedText []string
 	var wrappedOpt []text.WriteOption
@@ -105,31 +106,30 @@ func main() {
 	var newswrappedText []string
 	var newswrappedOpt []text.WriteOption
 	var newswrappedState []text.WriteOption
+	var rsswrappedText []string
+	var rsswrappedOpt []text.WriteOption
+	var rsswrappedState []text.WriteOption
 
-	var newsreaderOutput string
-	//	var newsOutput string
-
-	// Call and wait till all are finished.
 	var wg sync.WaitGroup
 	wg.Add(4)
 
 	go func() {
-		wrappedText, wrappedOpt, wrappedState = weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
+		wrappedText, wrappedOpt, wrappedState = weather.Print(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
 		wg.Done()
 	}()
 
 	go func() {
-		stocks.StockPrint(viper.GetString("stocks.symbol"), viper.GetString("stocks.api_key"))
+		stocks.Print(viper.GetString("stocks.symbol"), viper.GetString("stocks.api_key"))
 		wg.Done()
 	}()
 
 	go func() {
-		newsreaderOutput = newsreader.NewsReaderPrint(viper.GetString("newsreader.url"))
+		rsswrappedText, rsswrappedOpt, rsswrappedState = newsreader.Print(viper.GetString("newsreader.url"))
 		wg.Done()
 	}()
 
 	go func() {
-		newswrappedText, newswrappedOpt, newswrappedState = news.NewsPrint(viper.GetString("news.url"), viper.GetString("news.api_key"))
+		newswrappedText, newswrappedOpt, newswrappedState = news.Print(viper.GetString("news.url"), viper.GetString("news.api_key"))
 		wg.Done()
 	}()
 
@@ -143,6 +143,7 @@ func main() {
 	defer t.Close()
 
 	borderlessTopLeft, err := text.New(text.WrapAtWords())
+	borderlessBottomLeft, err := text.New(text.WrapAtWords())
 	borderlessTopRight, err := text.New(text.WrapAtWords())
 
 	for i, s := range wrappedText {
@@ -161,13 +162,12 @@ func main() {
 		}
 	}
 
-	borderlessBottomLeft, err := text.New(text.WrapAtWords())
-	if err != nil {
-		panic(err)
-	}
-
-	if err := borderlessBottomLeft.Write(newsreaderOutput, text.WriteReplace()); err != nil {
-		panic(err)
+	for i, s := range rsswrappedText {
+		if rsswrappedState[i] != nil {
+			borderlessBottomLeft.Write(s, rsswrappedState[i], rsswrappedOpt[i])
+		} else {
+			borderlessBottomLeft.Write(s, rsswrappedOpt[i])
+		}
 	}
 
 	go writeUpdate(ctx, borderlessTopLeft, borderlessBottomLeft, borderlessTopRight, 10*time.Second)

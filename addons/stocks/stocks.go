@@ -29,11 +29,11 @@ type QuoteDetail struct {
 	QuoteChangePer string `json:"10. change percent"`
 }
 
-// StockPrint just outputs a string.
+// Print just outputs a string.
 // See https://www.alphavantage.co/documentation/#latestprice
-func StockPrint(stSymbol string, stAPI string) {
+func Print(stSymbol string, stAPI string) {
 	stURL := url + "?function=GLOBAL_QUOTE&symbol=" + stSymbol + "&apikey=" + stAPI
-	//	fmt.Println("Stock URL: %s", stURL)
+
 	response, err := http.Get(stURL)
 	if err != nil {
 		fmt.Printf("The HTTP request failed with error %s\n", err)
