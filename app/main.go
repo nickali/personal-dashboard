@@ -178,8 +178,11 @@ func main() {
 		container.BorderTitle("PRESS Q TO QUIT"),
 		container.SplitVertical(
 			container.Left(
-				container.SplitHorizontal(container.Top(container.PlaceWidget(borderlessTopLeft)), container.Bottom(container.PlaceWidget(borderlessBottomLeft)), container.SplitPercent(5))),
-			container.Right(container.Border(linestyle.Light), container.BorderTitle("News"), container.PlaceWidget(borderlessTopRight))))
+				container.SplitHorizontal(
+					container.Top(container.PlaceWidget(borderlessTopLeft)),
+					container.Bottom(
+						container.Border(linestyle.Light), container.BorderTitle("RSS"), container.PaddingRightPercent(3), container.PaddingLeftPercent(3), container.PlaceWidget(borderlessBottomLeft)), container.SplitPercent(5))),
+			container.Right(container.Border(linestyle.Light), container.BorderTitle("News"), container.PaddingRightPercent(3), container.PaddingLeftPercent(3), container.PlaceWidget(borderlessTopRight))))
 
 	if err != nil {
 		panic(err)
