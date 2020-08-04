@@ -157,7 +157,7 @@ func main() {
 		panic(err)
 	}
 
-	go writeUpdate(ctx, borderlessTopLeft, borderlessBottomLeft, borderlessTopRight, 10*time.Second)
+	go writeUpdate(ctx, borderlessTopLeft, borderlessBottomLeft, borderlessTopRight, 300*time.Second)
 
 	c, err := container.New(
 		t, container.ID(rootID),
