@@ -9,5 +9,6 @@ newsreader:
 news:
  url: <ENTER URL>
  api_key: <ENTER API KEY>
+update_interval: <ENTER SECONDS>
 
 

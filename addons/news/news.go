@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	//	"util/textTransform"
+
 	"github.com/tidwall/gjson"
 )
 
@@ -64,8 +66,9 @@ func NewsPrint(url string, stAPI string) string {
 				} else {
 					maxLength = 100
 				}
+				scrubbedDesc := strings.ReplaceAll(resultDesc[i].String(), "\u00a0", "")
 
-				fmt.Fprintf(&b, "%s:\n%s\n%s\n\n", resultTitle[i], resultDesc[i].String()[:maxLength], resultURL[i].String())
+				fmt.Fprintf(&b, "%s:\n%s\n%s\n\n", resultTitle[i], scrubbedDesc[:maxLength], resultURL[i].String())
 			}
 		}
 	}
