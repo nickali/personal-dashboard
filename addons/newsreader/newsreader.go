@@ -8,7 +8,7 @@ import (
 	"github.com/mmcdole/gofeed"
 )
 
-var maxItems = 3
+var maxItems = 20
 
 var fmtDate string
 

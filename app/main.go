@@ -62,10 +62,16 @@ func writeUpdate(ctx context.Context, TopLeft *text.Text, BottomLeft *text.Text,
 	for {
 		select {
 		case <-ticker.C:
-			weatherOutput := weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
-			if err := TopLeft.Write(fmt.Sprintf("%s\n", weatherOutput), text.WriteReplace()); err != nil {
-				panic(err)
+			wrappedText, wrappedOpt, wrappedState := weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
+
+			for i, s := range wrappedText {
+				if wrappedState[i] != nil {
+					TopLeft.Write(s, wrappedState[i], wrappedOpt[i])
+				} else {
+					TopLeft.Write(s, wrappedOpt[i])
+				}
 			}
+
 			newsreaderOutput := newsreader.NewsReaderPrint(viper.GetString("newsreader.url"))
 			if err := BottomLeft.Write(fmt.Sprintf("%s\n", newsreaderOutput), text.WriteReplace()); err != nil {
 				panic(err)
@@ -84,27 +90,21 @@ func writeUpdate(ctx context.Context, TopLeft *text.Text, BottomLeft *text.Text,
 func main() {
 	fmt.Println("Starting the application...")
 
-	/*
-		var ip = flag.Int("flagname", 1234, "help message for flagname")
-		flag.Parse()
-		fmt.Println("ip has value ", *ip)
-	*/
-
 	readConfig()
 	//printConfig()
 
-	var weatherOutput string
+	var wrappedText []string
+	var wrappedOpt []text.WriteOption
+	var wrappedState []text.WriteOption
 	var newsreaderOutput string
 	var newsOutput string
-
-	//	var stocksOutput string
 
 	// Call and wait till all are finished.
 	var wg sync.WaitGroup
 	wg.Add(4)
 
 	go func() {
-		weatherOutput = weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
+		wrappedText, wrappedOpt, wrappedState = weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
 		wg.Done()
 	}()
 
@@ -125,31 +125,33 @@ func main() {
 
 	wg.Wait()
 
+	ctx, cancel := context.WithCancel(context.Background())
 	t, err := termbox.New()
 	if err != nil {
 		panic(err)
 	}
 	defer t.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	borderlessTopLeft, err := text.New(text.WrapAtWords())
 
-	borderlessTopLeft, err := text.New()
+	for i, s := range wrappedText {
+		if wrappedState[i] != nil {
+			borderlessTopLeft.Write(s, wrappedState[i], wrappedOpt[i])
+		} else {
+			borderlessTopLeft.Write(s, wrappedOpt[i])
+		}
+	}
+
+	borderlessBottomLeft, err := text.New(text.WrapAtWords())
 	if err != nil {
 		panic(err)
 	}
-	if err := borderlessTopLeft.Write(weatherOutput, text.WriteReplace()); err != nil {
-		panic(err)
-	}
 
-	borderlessBottomLeft, err := text.New()
-	if err != nil {
-		panic(err)
-	}
 	if err := borderlessBottomLeft.Write(newsreaderOutput, text.WriteReplace()); err != nil {
 		panic(err)
 	}
 
-	borderlessTopRight, err := text.New()
+	borderlessTopRight, err := text.New(text.WrapAtWords())
 	if err != nil {
 		panic(err)
 	}
@@ -157,7 +159,7 @@ func main() {
 		panic(err)
 	}
 
-	go writeUpdate(ctx, borderlessTopLeft, borderlessBottomLeft, borderlessTopRight, 300*time.Second)
+	go writeUpdate(ctx, borderlessTopLeft, borderlessBottomLeft, borderlessTopRight, 10*time.Second)
 
 	c, err := container.New(
 		t, container.ID(rootID),
@@ -166,7 +168,7 @@ func main() {
 		container.SplitVertical(
 			container.Left(
 				container.SplitHorizontal(container.Top(container.PlaceWidget(borderlessTopLeft)), container.Bottom(container.PlaceWidget(borderlessBottomLeft)), container.SplitPercent(5))),
-			container.Right(container.PlaceWidget(borderlessTopRight))))
+			container.Right(container.Border(linestyle.Light), container.BorderTitle("News"), container.PlaceWidget(borderlessTopRight))))
 
 	if err != nil {
 		panic(err)
