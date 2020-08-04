@@ -76,9 +76,15 @@ func writeUpdate(ctx context.Context, TopLeft *text.Text, BottomLeft *text.Text,
 			if err := BottomLeft.Write(fmt.Sprintf("%s\n", newsreaderOutput), text.WriteReplace()); err != nil {
 				panic(err)
 			}
-			newsOutput := news.NewsPrint(viper.GetString("news.url"), viper.GetString("news.api_key"))
-			if err := TopRight.Write(fmt.Sprintf("%s\n", newsOutput), text.WriteReplace()); err != nil {
-				panic(err)
+
+			newswrappedText, newswrappedOpt, newswrappedState := news.NewsPrint(viper.GetString("news.url"), viper.GetString("news.api_key"))
+
+			for i, s := range newswrappedText {
+				if newswrappedState[i] != nil {
+					TopRight.Write(s, newswrappedState[i], newswrappedOpt[i])
+				} else {
+					TopRight.Write(s, newswrappedOpt[i])
+				}
 			}
 
 		case <-ctx.Done():
@@ -96,8 +102,12 @@ func main() {
 	var wrappedText []string
 	var wrappedOpt []text.WriteOption
 	var wrappedState []text.WriteOption
+	var newswrappedText []string
+	var newswrappedOpt []text.WriteOption
+	var newswrappedState []text.WriteOption
+
 	var newsreaderOutput string
-	var newsOutput string
+	//	var newsOutput string
 
 	// Call and wait till all are finished.
 	var wg sync.WaitGroup
@@ -119,7 +129,7 @@ func main() {
 	}()
 
 	go func() {
-		newsOutput = news.NewsPrint(viper.GetString("news.url"), viper.GetString("news.api_key"))
+		newswrappedText, newswrappedOpt, newswrappedState = news.NewsPrint(viper.GetString("news.url"), viper.GetString("news.api_key"))
 		wg.Done()
 	}()
 
@@ -133,6 +143,7 @@ func main() {
 	defer t.Close()
 
 	borderlessTopLeft, err := text.New(text.WrapAtWords())
+	borderlessTopRight, err := text.New(text.WrapAtWords())
 
 	for i, s := range wrappedText {
 		if wrappedState[i] != nil {
@@ -142,20 +153,20 @@ func main() {
 		}
 	}
 
+	for i, s := range newswrappedText {
+		if newswrappedState[i] != nil {
+			borderlessTopRight.Write(s, newswrappedState[i], newswrappedOpt[i])
+		} else {
+			borderlessTopRight.Write(s, newswrappedOpt[i])
+		}
+	}
+
 	borderlessBottomLeft, err := text.New(text.WrapAtWords())
 	if err != nil {
 		panic(err)
 	}
 
 	if err := borderlessBottomLeft.Write(newsreaderOutput, text.WriteReplace()); err != nil {
-		panic(err)
-	}
-
-	borderlessTopRight, err := text.New(text.WrapAtWords())
-	if err != nil {
-		panic(err)
-	}
-	if err := borderlessTopRight.Write(newsOutput, text.WriteReplace()); err != nil {
 		panic(err)
 	}
 
