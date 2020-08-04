@@ -1,6 +1,7 @@
 package main
 
 import (
+	"addons/news"
 	"addons/newsreader"
 	"addons/stocks"
 	"addons/weather"
@@ -53,7 +54,7 @@ func readConfig() bool {
 	return true
 }
 
-func writeUpdate(ctx context.Context, TopLeft *text.Text, BottomLeft *text.Text, delay time.Duration) {
+func writeUpdate(ctx context.Context, TopLeft *text.Text, BottomLeft *text.Text, TopRight *text.Text, delay time.Duration) {
 
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
@@ -67,6 +68,10 @@ func writeUpdate(ctx context.Context, TopLeft *text.Text, BottomLeft *text.Text,
 			}
 			newsreaderOutput := newsreader.NewsReaderPrint(viper.GetString("newsreader.url"))
 			if err := BottomLeft.Write(fmt.Sprintf("%s\n", newsreaderOutput), text.WriteReplace()); err != nil {
+				panic(err)
+			}
+			newsOutput := news.NewsPrint(viper.GetString("news.url"), viper.GetString("news.api_key"))
+			if err := TopRight.Write(fmt.Sprintf("%s\n", newsOutput), text.WriteReplace()); err != nil {
 				panic(err)
 			}
 
@@ -90,12 +95,13 @@ func main() {
 
 	var weatherOutput string
 	var newsreaderOutput string
+	var newsOutput string
 
 	//	var stocksOutput string
 
 	// Call and wait till all are finished.
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(4)
 
 	go func() {
 		weatherOutput = weather.WeatherPrint(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
@@ -109,6 +115,11 @@ func main() {
 
 	go func() {
 		newsreaderOutput = newsreader.NewsReaderPrint(viper.GetString("newsreader.url"))
+		wg.Done()
+	}()
+
+	go func() {
+		newsOutput = news.NewsPrint(viper.GetString("news.url"), viper.GetString("news.api_key"))
 		wg.Done()
 	}()
 
@@ -138,15 +149,15 @@ func main() {
 		panic(err)
 	}
 
-	borderlessRight, err := text.New()
+	borderlessTopRight, err := text.New()
 	if err != nil {
 		panic(err)
 	}
-	if err := borderlessRight.Write("This is the right box"); err != nil {
+	if err := borderlessTopRight.Write(newsOutput, text.WriteReplace()); err != nil {
 		panic(err)
 	}
 
-	go writeUpdate(ctx, borderlessTopLeft, borderlessBottomLeft, 10*time.Second)
+	go writeUpdate(ctx, borderlessTopLeft, borderlessBottomLeft, borderlessTopRight, 10*time.Second)
 
 	c, err := container.New(
 		t, container.ID(rootID),
@@ -155,7 +166,7 @@ func main() {
 		container.SplitVertical(
 			container.Left(
 				container.SplitHorizontal(container.Top(container.PlaceWidget(borderlessTopLeft)), container.Bottom(container.PlaceWidget(borderlessBottomLeft)), container.SplitPercent(5))),
-			container.Right(container.PlaceWidget(borderlessRight))))
+			container.Right(container.PlaceWidget(borderlessTopRight))))
 
 	if err != nil {
 		panic(err)
