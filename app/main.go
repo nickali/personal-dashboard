@@ -54,7 +54,7 @@ func readConfig() bool {
 	return true
 }
 
-func writeUpdate(ctx context.Context, TopLeft *text.Text, BottomLeft *text.Text, TopRight *text.Text, delay time.Duration) {
+func writeUpdate(ctx context.Context, TopLeftLeft *text.Text, BottomLeft *text.Text, TopRight *text.Text, delay time.Duration) {
 
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
@@ -65,9 +65,9 @@ func writeUpdate(ctx context.Context, TopLeft *text.Text, BottomLeft *text.Text,
 			wrappedText, wrappedOpt, wrappedState := weather.Print(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
 			for i, s := range wrappedText {
 				if wrappedState[i] != nil {
-					TopLeft.Write(s, wrappedState[i], wrappedOpt[i])
+					TopLeftLeft.Write(s, wrappedState[i], wrappedOpt[i])
 				} else {
-					TopLeft.Write(s, wrappedOpt[i])
+					TopLeftLeft.Write(s, wrappedOpt[i])
 				}
 			}
 
@@ -100,26 +100,29 @@ func main() {
 
 	readConfig()
 
-	var wrappedText []string
-	var wrappedOpt []text.WriteOption
-	var wrappedState []text.WriteOption
+	var weathwrappedText []string
+	var weathwrappedOpt []text.WriteOption
+	var weathwrappedState []text.WriteOption
 	var newswrappedText []string
 	var newswrappedOpt []text.WriteOption
 	var newswrappedState []text.WriteOption
 	var rsswrappedText []string
 	var rsswrappedOpt []text.WriteOption
 	var rsswrappedState []text.WriteOption
+	var stockwrappedText []string
+	var stockwrappedOpt []text.WriteOption
+	var stockwrappedState []text.WriteOption
 
 	var wg sync.WaitGroup
 	wg.Add(4)
 
 	go func() {
-		wrappedText, wrappedOpt, wrappedState = weather.Print(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
+		weathwrappedText, weathwrappedOpt, weathwrappedState = weather.Print(viper.GetString("weather.zip"), viper.GetString("weather.api_key"))
 		wg.Done()
 	}()
 
 	go func() {
-		stocks.Print(viper.GetString("stocks.symbol"), viper.GetString("stocks.api_key"))
+		stockwrappedText, stockwrappedOpt, stockwrappedState = stocks.Print(viper.GetString("stocks.symbol"), viper.GetString("stocks.api_key"))
 		wg.Done()
 	}()
 
@@ -142,15 +145,24 @@ func main() {
 	}
 	defer t.Close()
 
-	borderlessTopLeft, err := text.New(text.WrapAtWords())
+	borderlessTopLeftLeft, err := text.New(text.WrapAtWords())
+	borderlessTopLeftRight, err := text.New(text.WrapAtWords())
 	borderlessBottomLeft, err := text.New(text.WrapAtWords())
 	borderlessTopRight, err := text.New(text.WrapAtWords())
 
-	for i, s := range wrappedText {
-		if wrappedState[i] != nil {
-			borderlessTopLeft.Write(s, wrappedState[i], wrappedOpt[i])
+	for i, s := range weathwrappedText {
+		if weathwrappedState[i] != nil {
+			borderlessTopLeftLeft.Write(s, weathwrappedState[i], weathwrappedOpt[i])
 		} else {
-			borderlessTopLeft.Write(s, wrappedOpt[i])
+			borderlessTopLeftLeft.Write(s, weathwrappedOpt[i])
+		}
+	}
+
+	for i, s := range stockwrappedText {
+		if stockwrappedState[i] != nil {
+			borderlessTopLeftRight.Write(s, stockwrappedState[i], stockwrappedOpt[i])
+		} else {
+			borderlessTopLeftRight.Write(s, stockwrappedOpt[i])
 		}
 	}
 
@@ -170,7 +182,7 @@ func main() {
 		}
 	}
 
-	go writeUpdate(ctx, borderlessTopLeft, borderlessBottomLeft, borderlessTopRight, 10*time.Second)
+	go writeUpdate(ctx, borderlessTopLeftLeft, borderlessBottomLeft, borderlessTopRight, 10*time.Second)
 
 	c, err := container.New(
 		t, container.ID(rootID),
@@ -179,9 +191,14 @@ func main() {
 		container.SplitVertical(
 			container.Left(
 				container.SplitHorizontal(
-					container.Top(container.PlaceWidget(borderlessTopLeft)),
+					container.Top(
+						container.SplitVertical(
+							container.Left(
+								container.PaddingLeftPercent(15), container.Border(linestyle.Round), container.PlaceWidget(borderlessTopLeftLeft)),
+							container.Right(
+								container.PaddingLeftPercent(37), container.Border(linestyle.Round), container.PlaceWidget(borderlessTopLeftRight)))),
 					container.Bottom(
-						container.Border(linestyle.Light), container.BorderTitle("RSS"), container.PaddingRightPercent(3), container.PaddingLeftPercent(3), container.PlaceWidget(borderlessBottomLeft)), container.SplitPercent(5))),
+						container.Border(linestyle.Light), container.BorderTitle("RSS"), container.PaddingRightPercent(3), container.PaddingLeftPercent(3), container.PlaceWidget(borderlessBottomLeft)), container.SplitPercent(7))),
 			container.Right(container.Border(linestyle.Light), container.BorderTitle("News"), container.PaddingRightPercent(3), container.PaddingLeftPercent(3), container.PlaceWidget(borderlessTopRight))))
 
 	if err != nil {

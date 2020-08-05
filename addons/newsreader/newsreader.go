@@ -10,7 +10,7 @@ import (
 	"github.com/mum4k/termdash/widgets/text"
 )
 
-var maxItems = 20
+var maxItems = 100
 var maxLength = 300
 var fmtDate string
 
@@ -52,8 +52,9 @@ func Print(stURL string) ([]string, []text.WriteOption, []text.WriteOption) {
 			strippedNewlines7Desc := strings.Replace(strippedNewlines6Desc, "<p>", "", -1)
 			strippedNewlines8Desc := strings.Replace(strippedNewlines7Desc, "</p>", "", -1)
 			strippedNewlines9Desc := strings.Replace(strippedNewlines8Desc, "&lt;", "", -1)
+			strippedNewlines10Desc := strings.ReplaceAll(strippedNewlines9Desc, "\u200b", "")
 
-			descLength := len(strippedNewlines9Desc)
+			descLength := len(strippedNewlines10Desc)
 			if descLength < 300 {
 				if descLength == 0 {
 					maxLength = 0
@@ -64,13 +65,18 @@ func Print(stURL string) ([]string, []text.WriteOption, []text.WriteOption) {
 				maxLength = 300
 			}
 
-			strippedDesc := p.Sanitize(strippedNewlines9Desc[:maxLength])
+			strippedDesc := p.Sanitize(strippedNewlines10Desc[:maxLength])
 
 			wrappedText = append(wrappedText, items[i].Title+"\n")
 			wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorGreen)))
 			wrappedState = append(wrappedState, nil)
 
-			wrappedText = append(wrappedText, strippedDesc+"\n")
+			if len(strippedDesc) > 5 {
+				wrappedText = append(wrappedText, strippedDesc+"\n")
+			} else {
+				wrappedText = append(wrappedText, "")
+			}
+
 			wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorRed)))
 			wrappedState = append(wrappedState, nil)
 

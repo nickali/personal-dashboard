@@ -2,10 +2,11 @@ package stocks
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
+
+	"github.com/mum4k/termdash/cell"
+	"github.com/mum4k/termdash/widgets/text"
 )
 
 const url = "https://www.alphavantage.co/query"
@@ -31,12 +32,17 @@ type QuoteDetail struct {
 
 // Print just outputs a string.
 // See https://www.alphavantage.co/documentation/#latestprice
-func Print(stSymbol string, stAPI string) {
+func Print(stSymbol string, stAPI string) ([]string, []text.WriteOption, []text.WriteOption) {
 	stURL := url + "?function=GLOBAL_QUOTE&symbol=" + stSymbol + "&apikey=" + stAPI
+	wrappedText := make([]string, 0)
+	wrappedOpt := make([]text.WriteOption, 0)
+	wrappedState := make([]text.WriteOption, 0)
 
 	response, err := http.Get(stURL)
 	if err != nil {
-		fmt.Printf("The HTTP request failed with error %s\n", err)
+		wrappedText = append(wrappedText, "The HTTP request failed with error with stock")
+		wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorRed)))
+		wrappedState = append(wrappedState, text.WriteReplace())
 	} else {
 		data, _ := ioutil.ReadAll(response.Body)
 		jsonData := &StockQuote{
@@ -45,13 +51,15 @@ func Print(stSymbol string, stAPI string) {
 		err := json.Unmarshal([]byte(data), jsonData)
 
 		if err != nil {
-			fmt.Printf("Something failed with failed with error %s\n", err)
+			wrappedText = append(wrappedText, "Problems unmarshalling stock")
+			wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorRed)))
+			wrappedState = append(wrappedState, text.WriteReplace())
+
 		} else {
-			fQuote, _ := strconv.ParseFloat(jsonData.QuoteDetail.QuotePrice, 64)
-			fmt.Println(jsonData.QuoteDetail.QuoteSymbol + ":")
-			fmt.Print("\t")
-			fmt.Println(fQuote)
+			wrappedText = append(wrappedText, jsonData.QuoteDetail.QuoteSymbol+": "+jsonData.QuoteDetail.QuotePrice)
+			wrappedOpt = append(wrappedOpt, text.WriteCellOpts(cell.FgColor(cell.ColorGreen)))
+			wrappedState = append(wrappedState, text.WriteReplace())
 		}
 	}
-	return
+	return wrappedText, wrappedOpt, wrappedState
 }
