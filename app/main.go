@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"sync"
 	"time"
 
@@ -54,7 +55,7 @@ func readConfig() bool {
 	return true
 }
 
-func writeUpdate(ctx context.Context, TopLeftLeft *text.Text, BottomLeft *text.Text, TopRight *text.Text, delay time.Duration) {
+func writeUpdate(ctx context.Context, TopLeftLeft *text.Text, TopLeftRight *text.Text, BottomLeft *text.Text, TopRight *text.Text, delay time.Duration) {
 
 	ticker := time.NewTicker(delay)
 	defer ticker.Stop()
@@ -68,6 +69,15 @@ func writeUpdate(ctx context.Context, TopLeftLeft *text.Text, BottomLeft *text.T
 					TopLeftLeft.Write(s, wrappedState[i], wrappedOpt[i])
 				} else {
 					TopLeftLeft.Write(s, wrappedOpt[i])
+				}
+			}
+
+			stockwrappedText, stockwrappedOpt, stockwrappedState := stocks.Print(viper.GetString("stocks.symbol"), viper.GetString("stocks.api_key"))
+			for i, s := range stockwrappedText {
+				if stockwrappedState[i] != nil {
+					TopLeftRight.Write(s, stockwrappedState[i], stockwrappedOpt[i])
+				} else {
+					TopLeftRight.Write(s, stockwrappedOpt[i])
 				}
 			}
 
@@ -182,7 +192,12 @@ func main() {
 		}
 	}
 
-	go writeUpdate(ctx, borderlessTopLeftLeft, borderlessBottomLeft, borderlessTopRight, 10*time.Second)
+	updateInterval, err := strconv.Atoi(viper.GetString("update_interval"))
+
+	if err != nil {
+		panic(err)
+	}
+	go writeUpdate(ctx, borderlessTopLeftLeft, borderlessTopLeftRight, borderlessBottomLeft, borderlessTopRight, time.Duration(updateInterval)*time.Second)
 
 	c, err := container.New(
 		t, container.ID(rootID),
